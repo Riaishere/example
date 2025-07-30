@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的个人网站</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="fc-ai-assistant/style.css"> <!-- 引入 AI 助手的样式 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -269,6 +270,30 @@
         </div>
     </footer>
 
+    <!-- AI 助手 -->
+    <div id="ai-assistant-button" class="ai-assistant-button">
+        <i class="fas fa-robot"></i>
+    </div>
+
+    <div id="ai-assistant-chat-window" class="ai-chat-window">
+        <div class="ai-chat-header">
+            <h3>AI 助手</h3>
+            <button id="ai-chat-close-button" class="ai-chat-close">&times;</button>
+        </div>
+        <div id="ai-chat-body" class="ai-chat-body">
+            <!-- 欢迎消息 -->
+            <div class="ai-chat-message ai">
+                <div class="ai-chat-avatar"><i class="fas fa-robot"></i></div>
+                <div class="ai-chat-bubble">您好！有什么可以帮助您的吗？</div>
+            </div>
+        </div>
+        <div class="ai-chat-footer">
+            <input type="text" id="ai-chat-input" class="ai-chat-input" placeholder="输入您的问题...">
+            <button id="ai-chat-send-button" class="ai-chat-send"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
     <script src="js/script.js"></script>
+    <script src="fc-ai-assistant/index.js"></script> <!-- 引入 AI 助手的脚本 -->
 </body>
 </html> 
