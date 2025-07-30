@@ -1,0 +1,6 @@
+{
+  "serviceName": "ai-assistant-service",
+  "functionNames": [
+    "ai-assistant-service/ai-assistant-handler"
+  ]
+}

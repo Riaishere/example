@@ -632,7 +632,7 @@ html {
     .section-title {
         font-size: 2rem;
     }
-    
+
     .container {
         padding: 0 15px;
     }
@@ -773,6 +773,13 @@ html {
 .ai-chat-message.user .ai-chat-bubble {
     background-color: #d1e7dd;
     border-top-right-radius: 4px;
+}
+
+/* 新增：错误消息样式 */
+.ai-chat-message.error .ai-chat-bubble {
+    background-color: #fee2e2; /* 淡红色背景 */
+    color: #991b1b; /* 深红色文字 */
+    border: 1px solid #fca5a5; /* 红色边框 */
 }
 
 .ai-chat-footer {
