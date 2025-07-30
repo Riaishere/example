@@ -1,0 +1,31 @@
+name: 网站防冷却脚本
+
+on:
+  schedule:
+    # 每10分钟运行一次，防止网站冷却
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  warm-up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 访问网站保持活跃
+        run: |
+          echo "开始访问网站防止冷却..."
+          # 主网站地址
+          response=$(curl -sL -w "%{http_code}" "https://riaishere.github.io" -o /dev/null)
+          if [ "$response" -eq 200 ]; then
+            echo "✅ 主页访问成功 (HTTP $response)"
+          else
+            echo "❌ 主页访问失败 (HTTP $response)"
+          fi
+          
+          # 如果有自定义域名，也访问一下
+          if curl -sL --max-time 10 "http://www.ria-hello.space" > /dev/null 2>&1; then
+            echo "✅ 自定义域名访问成功"
+          else
+            echo "⚠️ 自定义域名访问失败或超时"
+          fi
+          
+          echo "防冷却任务完成！" 
