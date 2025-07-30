@@ -1,4 +1,4 @@
-const axios = require('axios');
+import axios from 'axios';
 
 // 从函数计算的环境变量中安全地读取配置
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
@@ -46,7 +46,7 @@ async function getAIResponse(prompt) {
 }
 
 
-exports.handler = async (req, res, context) => {
+export const handler = async (req, res, context) => {
     // 设置 CORS 响应头，以允许前端跨域访问
     res.setHeader('Access-Control-Allow-Origin', CORS_ALLOWED_ORIGIN);
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -89,4 +89,4 @@ exports.handler = async (req, res, context) => {
         res.setHeader('Content-Type', 'application/json');
         res.send(JSON.stringify({ error: error.message || 'An internal server error occurred.' }));
     }
-}; 
+};
