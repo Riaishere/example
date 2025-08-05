@@ -10,9 +10,12 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// 主处理函数 (无需修改)
+// 导入AI服务模块
+const aiService = require('./ai-service.js');
+
+// 主处理函数
 exports.handler = async (event, context, callback) => {
-  // --- 关键修复：解码并解析真实事件 ---
+  // 解码并解析真实事件
   const eventString = event.toString('utf-8');
   const parsedEvent = JSON.parse(eventString);
 
@@ -47,7 +50,14 @@ exports.handler = async (event, context, callback) => {
     }
   }
   
-  // 3. 处理GET请求
+  // 3. 处理AI聊天页面请求
+  if (requestPath === '/ai-chat' && httpMethod.toUpperCase() === 'GET') {
+    console.log("匹配到AI聊天页面路由");
+    callback(null, handleAIChatPageRequest());
+    return;
+  }
+  
+  // 4. 处理GET请求
   if (httpMethod.toUpperCase() === 'GET') {
       // 根路径返回主页
       if (requestPath === '/') {
@@ -61,7 +71,7 @@ exports.handler = async (event, context, callback) => {
       return;
   }
 
-  // 4. 对于其他所有未知请求，返回404
+  // 5. 对于其他所有未知请求，返回404
   console.log(`未匹配到任何路由，返回404 for ${httpMethod} ${requestPath}`);
   callback(null, {
       statusCode: 404,
@@ -70,7 +80,7 @@ exports.handler = async (event, context, callback) => {
   });
 };
 
-// --- 子函数 ---
+// 子函数
 
 /**
  * 处理静态主页HTML的请求
@@ -93,46 +103,90 @@ function handleStaticPageRequest() {
 }
 
 /**
+ * 处理AI聊天页面HTML的请求
+ */
+function handleAIChatPageRequest() {
+  try {
+    const htmlContent = fs.readFileSync(path.resolve(__dirname, 'ai-chat.html'), 'utf-8');
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+      body: htmlContent,
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' },
+      body: '服务器内部错误：无法读取AI聊天页面文件。',
+    };
+  }
+}
+
+/**
  * 处理静态资源（如图片）的请求
  * @param {string} requestPath - 请求的资源路径, e.g., /Ria.jpg?t=12345
  */
 function handleStaticAssetRequest(requestPath) {
-    // 关键修复：从请求路径中移除查询参数（例如 ?t=...），得到纯粹的文件路径
-    const pathnameOnly = requestPath.split('?')[0];
-
+    // 从请求路径中移除查询参数（例如 ?t=...），得到纯粹的文件路径
+    const cleanPath = requestPath.split('?')[0];
+    
     // 安全检查：防止路径遍历攻击
-    const safeSuffix = path.normalize(pathnameOnly).replace(/^(\.\.(\/|\\|$))+/, '');
-    const filePath = path.join(__dirname, safeSuffix);
-
-    if (!fs.existsSync(filePath)) {
-        console.error(`静态资源未找到: ${filePath}`);
-        return { statusCode: 404, headers: {'Content-Type': 'text/plain'}, body: 'Asset Not Found' };
+    if (cleanPath.includes('..') || cleanPath.includes('//')) {
+        return {
+            statusCode: 403,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' },
+            body: 'Forbidden: 不允许访问此路径'
+        };
     }
-
+    
+    // 构建文件路径
+    const filePath = path.resolve(__dirname, cleanPath.substring(1)); // 移除开头的 '/'
+    
     try {
+        // 检查文件是否存在
+        if (!fs.existsSync(filePath)) {
+            return {
+                statusCode: 404,
+                headers: { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' },
+                body: 'File not found'
+            };
+        }
+        
+        // 读取文件
         const fileContent = fs.readFileSync(filePath);
-        const contentType = getContentType(filePath);
-        console.log(`成功提供静态资源: ${filePath} as ${contentType}`);
+        const contentType = getContentType(path.extname(filePath));
         
         return {
             statusCode: 200,
-            headers: { 'Content-Type': contentType },
+            headers: { ...CORS_HEADERS, 'Content-Type': contentType },
             body: fileContent.toString('base64'),
-            isBase64Encoded: true,
+            isBase64Encoded: true
         };
+        
     } catch (error) {
-        console.error(`读取静态资源失败: ${error}`);
-        return { statusCode: 500, headers: {'Content-Type': 'text/plain'}, body: 'Error reading asset' };
+        console.error(`读取文件失败: ${filePath}`, error);
+        return {
+            statusCode: 500,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' },
+            body: '服务器内部错误：无法读取文件。'
+        };
     }
 }
 
 /**
  * 根据文件扩展名获取MIME类型
- * @param {string} filePath 
+ * @param {string} fileExtension - 文件扩展名
+ * @returns {string} MIME类型
  */
-function getContentType(filePath) {
-    const ext = path.extname(filePath).toLowerCase();
-    switch (ext) {
+function getContentType(fileExtension) {
+    switch (fileExtension.toLowerCase()) {
+        case '.html':
+        case '.htm':
+            return 'text/html; charset=utf-8';
+        case '.txt':
+            return 'text/plain; charset=utf-8';
+        case '.json':
+            return 'application/json; charset=utf-8';
         case '.jpg':
         case '.jpeg':
             return 'image/jpeg';
@@ -152,17 +206,16 @@ function getContentType(filePath) {
 }
 
 /**
- * 处理对AI聊天API的请求（非流式版本，适合函数计算）
+ * 处理对AI聊天API的请求（使用新的AI服务模块）
  * @param {object} parsedEvent - 已解析的真实事件对象
  */
 async function handleChatRequest(parsedEvent) {
-    let userMessage;
+    let requestBody;
     try {
         if (!parsedEvent.body) throw new Error("Request body is empty.");
-        const body = JSON.parse(parsedEvent.body);
-        userMessage = body.message;
-        if (!userMessage) throw new Error("'message' field is missing.");
-        console.log("收到用户消息:", userMessage);
+        requestBody = JSON.parse(parsedEvent.body);
+        if (!requestBody.message) throw new Error("'message' field is missing.");
+        console.log("收到用户消息:", requestBody.message);
     } catch (e) {
         return {
             statusCode: 400,
@@ -171,107 +224,37 @@ async function handleChatRequest(parsedEvent) {
         };
     }
 
-    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-    if (!DEEPSEEK_API_KEY) {
-        console.error("未配置DEEPSEEK_API_KEY");
+    try {
+        // 使用新的AI服务处理请求
+        const result = await aiService.handleAIRequest(requestBody);
+        
+        if (result.success) {
+            return {
+                statusCode: 200,
+                headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    response: result.response,
+                    sessionId: result.sessionId,
+                    isCommand: result.isCommand || false,
+                    action: result.action
+                })
+            };
+        } else {
+            return {
+                statusCode: 500,
+                headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    error: result.error,
+                    fallbackResponse: result.fallbackResponse
+                })
+            };
+        }
+    } catch (error) {
+        console.error("AI服务处理失败:", error);
         return {
             statusCode: 500,
             headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-            body: JSON.stringify({error: '服务器未配置 DEEPSEEK_API_KEY'})
+            body: JSON.stringify({error: 'AI服务暂时不可用，请稍后再试'})
         };
     }
-
-    const postData = JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { content: `你是一个AI助手，你的名字叫"石耳AI"，由陈科瑾创造。请用友好、简洁、乐于助人的语气回答问题。
-
-重要：这个交互式终端网站有一些特殊的快速命令，当用户询问相关主题时，你应该自然地建议他们使用这些命令来获得更详细和专业的信息：
-
-快速命令列表：
-- "你好" 或 "hello" - 专业的问候和介绍
-- "你是谁" - 获取关于我的详细介绍
-- "陈科瑾是谁" - 了解我的创造者和他的背景
-- "你的技能" - 查看我的详细能力列表
-- "网站简介" - 获取这个网站的完整介绍
-- "帮助" - 查看详细的使用指南
-- "快速命令" - 显示所有可用的快速命令
-- "再见" - 专业的告别
-- "谢谢" - 礼貌的回应
-
-引导策略：
-- 当用户问"你是谁"相关问题时，建议他们输入"你是谁"获取完整介绍
-- 当用户询问陈科瑾相关信息时，建议使用"陈科瑾是谁"命令
-- 当用户询问网站功能时，推荐"网站简介"命令
-- 当用户需要帮助时，推荐"帮助"命令
-- 当用户想了解我的能力时，推荐"你的技能"命令
-
-请自然地在回答中融入这些建议，不要显得生硬，也不要解释这些命令的技术实现。`, role: 'system' },
-          { content: userMessage, role: 'user' },
-        ],
-        stream: false, // 非流式响应
-    });
-
-    const options = {
-        hostname: 'api.deepseek.com',
-        path: '/chat/completions',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-        },
-    };
-
-    return new Promise((resolve) => {
-        const req = https.request(options, (res) => {
-            let responseData = '';
-            
-            res.on('data', (chunk) => {
-                responseData += chunk;
-            });
-            
-            res.on('end', () => {
-                try {
-                    const parsedResponse = JSON.parse(responseData);
-                    console.log("AI响应成功");
-                    
-                    if (parsedResponse.error) {
-                        resolve({
-                            statusCode: 500,
-                            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({error: parsedResponse.error.message})
-                        });
-                        return;
-                    }
-                    
-                    const aiReply = parsedResponse.choices[0].message.content;
-                    resolve({
-                        statusCode: 200,
-                        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({reply: aiReply})
-                    });
-                    
-                } catch(e) {
-                    console.error("解析AI响应失败:", e);
-                    resolve({
-                        statusCode: 500,
-                        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({error: '解析AI响应失败'})
-                    });
-                }
-            });
-        });
-
-        req.on('error', (e) => {
-            console.error("调用AI服务出错:", e);
-            resolve({
-                statusCode: 500,
-                headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-                body: JSON.stringify({error: `调用AI服务时发生网络错误: ${e.message}`})
-            });
-        });
-
-        req.write(postData);
-        req.end();
-    });
 }
