@@ -1,9 +1,9 @@
 // AI服务配置文件
 module.exports = {
-    // OpenAI配置
-    openai: {
-        apiKey: process.env.OPENAI_API_KEY || '',
-        model: 'gpt-3.5-turbo',
+    // DeepSeek配置
+    deepseek: {
+        apiKey: process.env.DEEPSEEK_API_KEY || 'sk-7dbd81e6126c424c876d86ac72bd8fde',
+        model: 'deepseek-chat',
         maxTokens: 1000,
         temperature: 0.7
     },

@@ -4,13 +4,13 @@ const config = require('./config.js');
 
 // AI服务配置
 const AI_CONFIG = {
-    // OpenAI配置
-    openai: {
-        apiKey: config.openai.apiKey,
-        baseURL: 'https://api.openai.com/v1',
-        model: config.openai.model,
-        maxTokens: config.openai.maxTokens,
-        temperature: config.openai.temperature
+    // DeepSeek配置
+    deepseek: {
+        apiKey: config.deepseek.apiKey,
+        baseURL: 'https://api.deepseek.com/v1',
+        model: config.deepseek.model,
+        maxTokens: config.deepseek.maxTokens,
+        temperature: config.deepseek.temperature
     },
     // 本地AI模型配置（如果有的话）
     local: {
@@ -123,27 +123,27 @@ class AIResponseGenerator {
         return hash.substring(0, 8);
     }
 
-    // 调用OpenAI API
-    async callOpenAI(messages, sessionId) {
-        if (!AI_CONFIG.openai.apiKey) {
-            throw new Error('OpenAI API密钥未配置');
+    // 调用DeepSeek API
+    async callDeepSeek(messages, sessionId) {
+        if (!AI_CONFIG.deepseek.apiKey) {
+            throw new Error('DeepSeek API密钥未配置');
         }
 
         const options = {
-            hostname: 'api.openai.com',
+            hostname: 'api.deepseek.com',
             path: '/v1/chat/completions',
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${AI_CONFIG.openai.apiKey}`
+                'Authorization': `Bearer ${AI_CONFIG.deepseek.apiKey}`
             }
         };
 
         const data = {
-            model: AI_CONFIG.openai.model,
+            model: AI_CONFIG.deepseek.model,
             messages: messages,
-            max_tokens: AI_CONFIG.openai.maxTokens,
-            temperature: AI_CONFIG.openai.temperature,
+            max_tokens: AI_CONFIG.deepseek.maxTokens,
+            temperature: AI_CONFIG.deepseek.temperature,
             presence_penalty: 0.1,
             frequency_penalty: 0.1
         };
@@ -156,10 +156,10 @@ class AIResponseGenerator {
                 conversationManager.addMessage(sessionId, 'assistant', aiResponse);
                 return aiResponse;
             } else {
-                throw new Error(`OpenAI API错误: ${response.statusCode}`);
+                throw new Error(`DeepSeek API错误: ${response.statusCode}`);
             }
         } catch (error) {
-            console.error('OpenAI API调用失败:', error);
+            console.error('DeepSeek API调用失败:', error);
             throw error;
         }
     }
@@ -220,11 +220,11 @@ class AIResponseGenerator {
             
             const fullMessages = [systemPrompt, ...messages];
             
-            // 尝试调用OpenAI
+            // 尝试调用DeepSeek
             try {
-                return await this.callOpenAI(fullMessages, sessionId);
-            } catch (openaiError) {
-                console.log('OpenAI失败，尝试备用AI服务...');
+                return await this.callDeepSeek(fullMessages, sessionId);
+            } catch (deepseekError) {
+                console.log('DeepSeek失败，尝试备用AI服务...');
                 
                 // 尝试备用AI服务
                 try {
