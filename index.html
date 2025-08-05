@@ -197,6 +197,7 @@
   - <span class="command">contact</span>   : 如何联系到...我? 👽
   - <span class="command">clear</span>     : 擦干净屏幕
   - <span class="command">#AI</span>       : 召唤终端里的小精灵 (输入 <span class="command">exit</span> 退出)
+- <span class="command">ai</span> 或 <span class="command">chat</span> : 打开AI助手聊天界面
             `;
 
             const aboutContent = `
@@ -283,6 +284,10 @@
                         break;
                     case '#ai':
                         switchToAiMode();
+                        break;
+                    case 'ai':
+                    case 'chat':
+                        window.location.href = '/ai-chat.html';
                         break;
                     case '':
                         break;
